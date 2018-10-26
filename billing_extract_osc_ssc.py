@@ -1,16 +1,3 @@
-
-# coding: utf-8
-
-# In[1]:
-
-
-from IPython.core.display import display, HTML
-display(HTML("<style>.container { width:100% !important; }</style>"))
-
-
-# In[2]:
-
-
 from io import BytesIO
 import json, pycurl
 import urllib3
@@ -120,12 +107,4 @@ migrate_records(query, connString, destination_table)
 #Pacing Report Cube Pull
 query =' SELECT NON EMPTY { [Measures].[Net] } ON COLUMNS, NON EMPTY { ([Company].[Company Code].[Company Code].ALLMEMBERS * [Product].[GL Entity Code].[GL Entity Code].ALLMEMBERS * [Product].[GL Sub Entity Code].[GL Sub Entity Code].ALLMEMBERS * [Product].[GL Product Code].[GL Product Code].ALLMEMBERS * [Order].[Ledger Account].[Ledger Account].ALLMEMBERS * [Order].[Ad Size].[Ad Size].ALLMEMBERS * [Order].[Ad Type].[Ad Type].ALLMEMBERS * [Sold To].[Parent Name Number].[Parent Name Number].ALLMEMBERS * [Order].[Sales Category].[Sales Category].ALLMEMBERS * [Order].[Sales Sub Category].[Sales Sub Category].ALLMEMBERS * [Product].[Product Code].[Product Code].ALLMEMBERS * [Product].[Parent Product].[Parent Product].ALLMEMBERS * [Product].[Product Type].[Product Type].ALLMEMBERS * [Reporting Date].[Fiscal Quarter].[Fiscal Quarter].ALLMEMBERS * [Reporting Date].[Fiscal Period].[Fiscal Period].ALLMEMBERS * [Reporting Date].[Fiscal Week].[Fiscal Week].ALLMEMBERS ) } DIMENSION PROPERTIES MEMBER_CAPTION, MEMBER_UNIQUE_NAME ON ROWS FROM ( SELECT ( { [Reporting Date].[Fiscal Period].&[201907], [Reporting Date].[Fiscal Period].&[201908], [Reporting Date].[Fiscal Period].&[201909], [Reporting Date].[Fiscal Period].&[201910], [Reporting Date].[Fiscal Period].&[201911], [Reporting Date].[Fiscal Period].&[201912] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Type].&[101] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Status].&[4] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Order Kind].&[Trade] } ) ON COLUMNS FROM ( SELECT ( { [Company].[Company Code].&[OSC], [Company].[Company Code].&[SSC] } ) ON COLUMNS FROM [Revenue]))))) CELL PROPERTIES VALUE, BACK_COLOR, FORE_COLOR, FORMATTED_VALUE, FORMAT_STRING, FONT_NAME, FONT_SIZE, FONT_FLAGS'
 migrate_records(query, connString, destination_table)
-
-
-# In[4]:
-
-
-pd.set_option('display.max_columns', None)  
-pd.set_option('display.expand_frame_repr', False)
-pd.set_option('max_colwidth', -1)
 
