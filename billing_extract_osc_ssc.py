@@ -35,7 +35,46 @@ def migrate_records(query, connString, destination_table):
     dataframe =dataframe[['company_code','gl_entity','gl_sub_entity','gl_product_code','ledger_account','order_ad_size','order_ad_type',
                        'parent_name_number', 'sales_category','sales_subcategory','product_code','parent_product','product_type', 
                        'fiscal_quarter','fiscal_period','fiscal_week','net']]
-
+    
+    dataframe.loc[dataframe['gl_product_code']=='FHOMEZ', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='OS0000', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='PLAKE9', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='PORG99', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='PSEM99', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='PVOL99', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='TMCSSL', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='TMCUSX', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='TMCWRP', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='X21000', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='X22000', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='X30000', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='X45000', 'gl_product_code'] = '000000'  
+    dataframe.loc[dataframe['gl_product_code']=='X10000', 'gl_product_code'] = 'DAO000'
+    dataframe.loc[dataframe['gl_product_code']=='BRNDCT', 'gl_product_code'] = 'DBC000'
+    dataframe.loc[dataframe['gl_product_code']=='X20000', 'gl_product_code'] = 'DCR000'
+    dataframe.loc[dataframe['gl_product_code']=='LCLEDG', 'gl_product_code'] = 'DLP000'
+    dataframe.loc[dataframe['gl_product_code']=='X55000', 'gl_product_code'] = 'DMS000'
+    dataframe.loc[dataframe['gl_product_code']=='RCHEXT', 'gl_product_code'] = 'DRC000'
+    dataframe.loc[dataframe['gl_product_code']=='ZEVENT', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='OSIGMG', 'gl_product_code'] = 'OSM000'
+    dataframe.loc[dataframe['gl_product_code']=='POSCEO', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code'].isnull(), 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='RELSFR', 'gl_product_code'] = 'SEZ710'
+    dataframe.loc[dataframe['gl_product_code']=='RHOMIM', 'gl_product_code'] = 'SHI000'
+    dataframe.loc[dataframe['gl_product_code']=='Undefined', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='0', 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']==0, 'gl_product_code'] = '000000'
+    dataframe.loc[dataframe['gl_product_code']=='EVT000', 'gl_product_code'] = '000000'
+    dataframe.loc[(dataframe['gl_product_code']=='DA O000'),'gl_entity']= '50000'
+    dataframe.loc[(dataframe['gl_product_code']=='DBC000'),'gl_entity']= '50000'
+    dataframe.loc[(dataframe['gl_product_code']=='DCR000'),'gl_entity']= '50000'  
+    dataframe.loc[(dataframe['gl_product_code']=='DLP000'),'gl_entity']= '50000'
+    dataframe.loc[(dataframe['gl_product_code']=='DMS000'),'gl_entity']= '50000'
+    dataframe.loc[(dataframe['gl_product_code']=='DRC000')&(dataframe['ledger_account']=='407000'),'gl_entity']= '50000'
+    dataframe.loc[(dataframe['gl_product_code']=='DRC000')&(dataframe['ledger_account']=='407200'),'gl_entity']= '50000'
+    dataframe.loc[(dataframe['gl_product_code']=='DRC000')&(dataframe['ledger_account']=='407420'),'gl_entity']= '50000'
+    
+ 
     dataframe.to_sql(destination_table, c, if_exists='append', index=False)
 
 #Connection criteria for postgresdb    
@@ -55,7 +94,7 @@ destination_table = 'billing'
 c.execute(sa_text('''TRUNCATE TABLE "billing"''').execution_options(autocommit=True))
 
 
-# In[3]:
+# In[4]:
 
 
 connString = "PROVIDER=MSOLAP;Data Source={0};Database={1}".format('fcwPsqlanl03','Billing_2')
@@ -64,7 +103,7 @@ destination_table = 'billing'
 #2016 - P6
 #Pacing Report Cube Pull
 query ='SELECT NON EMPTY { [Measures].[Net] } ON COLUMNS, NON EMPTY { ([Company].[Company Code].[Company Code].ALLMEMBERS * [Product].[GL Entity Code].[GL Entity Code].ALLMEMBERS * [Product].[GL Sub Entity Code].[GL Sub Entity Code].ALLMEMBERS * [Product].[GL Product Code].[GL Product Code].ALLMEMBERS * [Order].[Ledger Account].[Ledger Account].ALLMEMBERS * [Order].[Ad Size].[Ad Size].ALLMEMBERS * [Order].[Ad Type].[Ad Type].ALLMEMBERS * [Sold To].[Parent Name Number].[Parent Name Number].ALLMEMBERS * [Order].[Sales Category].[Sales Category].ALLMEMBERS * [Order].[Sales Sub Category].[Sales Sub Category].ALLMEMBERS * [Product].[Product Code].[Product Code].ALLMEMBERS * [Product].[Parent Product].[Parent Product].ALLMEMBERS * [Product].[Product Type].[Product Type].ALLMEMBERS * [Reporting Date].[Fiscal Quarter].[Fiscal Quarter].ALLMEMBERS * [Reporting Date].[Fiscal Period].[Fiscal Period].ALLMEMBERS * [Reporting Date].[Fiscal Week].[Fiscal Week].ALLMEMBERS ) } DIMENSION PROPERTIES MEMBER_CAPTION, MEMBER_UNIQUE_NAME ON ROWS FROM ( SELECT ( { [Reporting Date].[Fiscal Period].&[201601], [Reporting Date].[Fiscal Period].&[201602], [Reporting Date].[Fiscal Period].&[201603], [Reporting Date].[Fiscal Period].&[201604], [Reporting Date].[Fiscal Period].&[201605], [Reporting Date].[Fiscal Period].&[201606] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Type].&[101] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Status].&[4] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Order Kind].&[Trade] } ) ON COLUMNS FROM ( SELECT ( { [Company].[Company Code].&[OSC], [Company].[Company Code].&[SSC] } ) ON COLUMNS FROM [Revenue]))))) CELL PROPERTIES VALUE, BACK_COLOR, FORE_COLOR, FORMATTED_VALUE, FORMAT_STRING, FONT_NAME, FONT_SIZE, FONT_FLAGS'
-migrate_records(query, connString, destination_table)
+# migrate_records(query, connString, destination_table)
 
 
 #2016 - P12
@@ -79,7 +118,7 @@ query =' SELECT NON EMPTY { [Measures].[Net] } ON COLUMNS, NON EMPTY { ([Company
 migrate_records(query, connString, destination_table)
 
 
-#2017 - P12
+# #2017 - P12
 #Pacing Report Cube Pull
 query =' SELECT NON EMPTY { [Measures].[Net] } ON COLUMNS, NON EMPTY { ([Company].[Company Code].[Company Code].ALLMEMBERS * [Product].[GL Entity Code].[GL Entity Code].ALLMEMBERS * [Product].[GL Sub Entity Code].[GL Sub Entity Code].ALLMEMBERS * [Product].[GL Product Code].[GL Product Code].ALLMEMBERS * [Order].[Ledger Account].[Ledger Account].ALLMEMBERS * [Order].[Ad Size].[Ad Size].ALLMEMBERS * [Order].[Ad Type].[Ad Type].ALLMEMBERS * [Sold To].[Parent Name Number].[Parent Name Number].ALLMEMBERS * [Order].[Sales Category].[Sales Category].ALLMEMBERS * [Order].[Sales Sub Category].[Sales Sub Category].ALLMEMBERS * [Product].[Product Code].[Product Code].ALLMEMBERS * [Product].[Parent Product].[Parent Product].ALLMEMBERS * [Product].[Product Type].[Product Type].ALLMEMBERS * [Reporting Date].[Fiscal Quarter].[Fiscal Quarter].ALLMEMBERS * [Reporting Date].[Fiscal Period].[Fiscal Period].ALLMEMBERS * [Reporting Date].[Fiscal Week].[Fiscal Week].ALLMEMBERS ) } DIMENSION PROPERTIES MEMBER_CAPTION, MEMBER_UNIQUE_NAME ON ROWS FROM ( SELECT ( { [Reporting Date].[Fiscal Period].&[201707], [Reporting Date].[Fiscal Period].&[201708], [Reporting Date].[Fiscal Period].&[201709], [Reporting Date].[Fiscal Period].&[201710], [Reporting Date].[Fiscal Period].&[201711], [Reporting Date].[Fiscal Period].&[201712] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Type].&[101] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Status].&[4] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Order Kind].&[Trade] } ) ON COLUMNS FROM ( SELECT ( { [Company].[Company Code].&[OSC], [Company].[Company Code].&[SSC] } ) ON COLUMNS FROM [Revenue]))))) CELL PROPERTIES VALUE, BACK_COLOR, FORE_COLOR, FORMATTED_VALUE, FORMAT_STRING, FONT_NAME, FONT_SIZE, FONT_FLAGS'
 migrate_records(query, connString, destination_table)
@@ -107,4 +146,3 @@ migrate_records(query, connString, destination_table)
 #Pacing Report Cube Pull
 query =' SELECT NON EMPTY { [Measures].[Net] } ON COLUMNS, NON EMPTY { ([Company].[Company Code].[Company Code].ALLMEMBERS * [Product].[GL Entity Code].[GL Entity Code].ALLMEMBERS * [Product].[GL Sub Entity Code].[GL Sub Entity Code].ALLMEMBERS * [Product].[GL Product Code].[GL Product Code].ALLMEMBERS * [Order].[Ledger Account].[Ledger Account].ALLMEMBERS * [Order].[Ad Size].[Ad Size].ALLMEMBERS * [Order].[Ad Type].[Ad Type].ALLMEMBERS * [Sold To].[Parent Name Number].[Parent Name Number].ALLMEMBERS * [Order].[Sales Category].[Sales Category].ALLMEMBERS * [Order].[Sales Sub Category].[Sales Sub Category].ALLMEMBERS * [Product].[Product Code].[Product Code].ALLMEMBERS * [Product].[Parent Product].[Parent Product].ALLMEMBERS * [Product].[Product Type].[Product Type].ALLMEMBERS * [Reporting Date].[Fiscal Quarter].[Fiscal Quarter].ALLMEMBERS * [Reporting Date].[Fiscal Period].[Fiscal Period].ALLMEMBERS * [Reporting Date].[Fiscal Week].[Fiscal Week].ALLMEMBERS ) } DIMENSION PROPERTIES MEMBER_CAPTION, MEMBER_UNIQUE_NAME ON ROWS FROM ( SELECT ( { [Reporting Date].[Fiscal Period].&[201907], [Reporting Date].[Fiscal Period].&[201908], [Reporting Date].[Fiscal Period].&[201909], [Reporting Date].[Fiscal Period].&[201910], [Reporting Date].[Fiscal Period].&[201911], [Reporting Date].[Fiscal Period].&[201912] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Type].&[101] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Status].&[4] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Order Kind].&[Trade] } ) ON COLUMNS FROM ( SELECT ( { [Company].[Company Code].&[OSC], [Company].[Company Code].&[SSC] } ) ON COLUMNS FROM [Revenue]))))) CELL PROPERTIES VALUE, BACK_COLOR, FORE_COLOR, FORMATTED_VALUE, FORMAT_STRING, FONT_NAME, FONT_SIZE, FONT_FLAGS'
 migrate_records(query, connString, destination_table)
-
