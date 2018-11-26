@@ -1,0 +1,19 @@
+ SELECT NON EMPTY { [Measures].[Commission Net] } ON COLUMNS, 
+ NON EMPTY { ([TM Sales Assignment].[SA ID].[SA ID].ALLMEMBERS * 
+              [TM Sales Assignment].[Sales Assignment Sub Team].[Sales Assignment Sub Team].ALLMEMBERS * 
+              [TM Sales Assignment].[Sales Assignment Employee].[Sales Assignment Employee].ALLMEMBERS * 
+              [Sold To].[Parent Name Number].[Parent Name Number].ALLMEMBERS * 
+              [Sold To].[Parent Name].[Parent Name].ALLMEMBERS * 
+              [Sold To].[Customer Name].[Customer Name].ALLMEMBERS * 
+              [Sold To].[Customer Name Number].[Customer Name Number].ALLMEMBERS * 
+              [Product].[Product Type].[Product Type].ALLMEMBERS * 
+              [Reporting Date].[Fiscal Period].[Fiscal Period].ALLMEMBERS * 
+              [Reporting Date].[Fiscal Quarter].[Fiscal Quarter].ALLMEMBERS * 
+              [Publication Date].[Date].[Date].ALLMEMBERS ) } 
+              DIMENSION PROPERTIES MEMBER_CAPTION, MEMBER_UNIQUE_NAME ON ROWS FROM 
+                 (SELECT ( { [TM Sales Assignment].[SA ID].&[Missing], [TM Sales Assignment].[SA ID].&[SA00002] } ) ON COLUMNS 
+                     FROM ( SELECT ( { [Reporting Date].[Fiscal Year].&[2018], [Reporting Date].[Fiscal Year].&[2019] } ) ON COLUMNS 
+                     FROM ( SELECT ( { [Company].[Company Code].&[SSC], [Company].[Company Code].&[OSC] } ) ON COLUMNS 
+                     FROM [Territory Management Modeling]))) 
+                     WHERE ( [Company].[Company Code].CurrentMember, [Reporting Date].[Fiscal Year].CurrentMember )
+ CELL PROPERTIES VALUE, BACK_COLOR, FORE_COLOR, FORMATTED_VALUE, FORMAT_STRING, FONT_NAME, FONT_SIZE, FONT_FLAGS
