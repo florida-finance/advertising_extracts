@@ -4,7 +4,5 @@
 2) pyi-makespec --onefile [FILE NAME]
 3) Add to spec: 
 >import sys
-
 >sys.setrecursionlimit(5000)
 
->
