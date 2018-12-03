@@ -7,5 +7,5 @@
 5) Add to spec: 
 >import sys <br>
 >sys.setrecursionlimit(5000)
-
+6) pyinstaller [FILE NAME].spec
 
