@@ -1,10 +1,4 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[6]:
-
-
-#Packages
+#packages
 import pandas as pd
 from datetime import datetime, timedelta, date
 import pandas.io.sql as psql
@@ -141,7 +135,7 @@ c =connect(username, password, database, hostname)
 df.to_sql('ssc_results', c, if_exists='append', index=False)
 dataframe = psql.read_sql('SELECT * from "ssc_results"', c)
 dataframe.sort_values(by=['Value'],ascending=False,inplace=True)
-dataframe.drop_duplicates(subset=['Period','Date_Run','Value_Type'],inplace=True)
+dataframe.drop_duplicates(subset=['Period','Date_Run','Value_Type','fiscal_year'],inplace=True)
 from sqlalchemy.sql import text as sa_text
 c.execute(sa_text('''TRUNCATE TABLE "ssc_results"''').execution_options(autocommit=True))
 dataframe.to_sql('ssc_results', c, if_exists='append', index=False)
@@ -247,6 +241,6 @@ df = df1.append(df2)
 df.to_sql('Results', c, if_exists='append', index=False)
 dataframe = psql.read_sql('SELECT * from "Results"', c)
 dataframe.sort_values(by=['Value'],ascending=False,inplace=True)
-dataframe.drop_duplicates(subset=['Period','Date_Run','Value_Type'],inplace=True)
+dataframe.drop_duplicates(subset=['Period','Date_Run','Value_Type', 'fiscal_year'],inplace=True)
 c.execute(sa_text('''TRUNCATE TABLE "Results"''').execution_options(autocommit=True))
 dataframe.to_sql('Results', c, if_exists='append', index=False)
