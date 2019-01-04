@@ -69,7 +69,8 @@ Hyperion_Pull.loc[Hyperion_Pull.Period=='Oct','Period']=10
 Hyperion_Pull.loc[Hyperion_Pull.Period=='Nov','Period']=11
 Hyperion_Pull.loc[Hyperion_Pull.Period=='Dec','Period']=12
 Hyperion_Pull.loc[Hyperion_Pull.Years=='FY17','Years']=2017
-Hyperion_Pull.loc[Hyperion_Pull.Years=='FY18','Years']=2018
+Hyperion_Pull.loc[Hyperion_Pull.Years=='FY18','Years']=2019
+Hyperion_Pull.loc[Hyperion_Pull.Years=='FY19','Years']=2018
 Hyperion_Pull.loc[Hyperion_Pull.SubEntity=='S_13018','SubEntity'] = 'Coral Springs Group (S_13018)'
 Hyperion_Pull.loc[Hyperion_Pull.SubEntity=='S_00000','SubEntity'] = 'Default - SubEntity (S_00000)'
 Hyperion_Pull.loc[Hyperion_Pull.SubEntity=='S_13021','SubEntity'] = 'Jewish Journal (S_13021)'
