@@ -1,91 +1,153 @@
 
+
+
+#Packages
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta, date
+import pandas.io.sql as psql
+import pandasql
+from sqlalchemy import create_engine
+from sqlalchemy import MetaData
+import time
 import win32com.client
-import psycopg2
-import tempfile
-import boto3
+from sqlalchemy.sql import text as sa_text
 
-
-# import warnings
-# warnings.filterwarnings("ignore")
-
-# pd.set_option('display.max_columns', None)  
-# pd.set_option('display.expand_frame_repr', False)
-# pd.set_option('max_colwidth', -1)
-
-#Function for chunking lists
-def chunks(l, n):
-    """Yield successive n-sized chunks from l."""
-    for i in range(0, len(l), n):
-        yield l[i:i + n]
-
-def fix_records(dataframe):
-    dataframe.rename(columns={0:'company_code', 2:'gl_entity', 4:'gl_sub_entity', 6:'gl_product_code', 8:'ledger_account', 10:'order_ad_size', 12:'order_ad_type',
-                       14:'parent_name_number', 16:'sales_category', 18:'sales_subcategory', 20:'product_code', 22:'parent_product', 24:'product_type', 
-                       26:'fiscal_quarter',28:'fiscal_period',30:'fiscal_week', 32:'sold_to_customer_name',34:'sold_to_customer_name_number',
-                       36:'order_color',38:'product_section_code',40:'pub_date',42:'pub_fiscal_period', 44:'pub_fiscal_year', 46:'net'},inplace=True)
-    
-    #dataframe['pub_date'] = dataframe['pub_date'].apply(pd.to_datetime, format='%Y-%m-%d')
-    
-    return dataframe
-
-
-#Connections string
-connString = "PROVIDER=MSOLAP;Data Source={0};Database={1}".format('fcwPsqlanl03','Billing_2')
-
-#Get Customer Name Numbers
-query = ' SELECT NON EMPTY { [Measures].[Net] } ON COLUMNS, NON EMPTY { ([Sold To].[Customer Name Number].[Customer Name Number].ALLMEMBERS ) } DIMENSION PROPERTIES MEMBER_CAPTION, MEMBER_UNIQUE_NAME ON ROWS FROM ( SELECT ( { [Publication Date].[Fiscal Year].&[2016], [Publication Date].[Fiscal Year].&[2017], [Publication Date].[Fiscal Year].&[2018], [Publication Date].[Fiscal Year].&[2019] } ) ON COLUMNS FROM ( SELECT ( { [Company].[Company Code].&[OSC], [Company].[Company Code].&[SSC] } ) ON COLUMNS FROM [Revenue])) WHERE ( [Company].[Company Code].CurrentMember, [Publication Date].[Fiscal Year].CurrentMember ) CELL PROPERTIES VALUE, BACK_COLOR, FORE_COLOR, FORMATTED_VALUE, FORMAT_STRING, FONT_NAME, FONT_SIZE, FONT_FLAGS'
-rs = win32com.client.Dispatch(r'ADODB.Recordset')
-rs.Open(query, connString, CursorType=3)
-customer_list = list(pd.DataFrame(data= list(rs.GetRows())).transpose()[0].unique())
-
-#Get All Billing results and append to query results
-query_result = pd.DataFrame()
-for i in chunks(customer_list,300):
-    z = ",".join(list(map(lambda x: '[Sold To].[Customer Name Number].&['+x+']',i)))
-    query ='SELECT NON EMPTY {{ [Measures].[Net] }} ON COLUMNS, NON EMPTY {{ ([Company].[Company Code].[Company Code].ALLMEMBERS * [Product].[GL Entity Code].[GL Entity Code].ALLMEMBERS * [Product].[GL Sub Entity Code].[GL Sub Entity Code].ALLMEMBERS * [Product].[GL Product Code].[GL Product Code].ALLMEMBERS * [Order].[Ledger Account].[Ledger Account].ALLMEMBERS * [Order].[Ad Size].[Ad Size].ALLMEMBERS * [Order].[Ad Type].[Ad Type].ALLMEMBERS * [Sold To].[Parent Name Number].[Parent Name Number].ALLMEMBERS * [Order].[Sales Category].[Sales Category].ALLMEMBERS * [Order].[Sales Sub Category].[Sales Sub Category].ALLMEMBERS * [Product].[Product Code].[Product Code].ALLMEMBERS * [Product].[Parent Product].[Parent Product].ALLMEMBERS * [Product].[Product Type].[Product Type].ALLMEMBERS * [Reporting Date].[Fiscal Quarter].[Fiscal Quarter].ALLMEMBERS * [Reporting Date].[Fiscal Period].[Fiscal Period].ALLMEMBERS * [Reporting Date].[Fiscal Week].[Fiscal Week].ALLMEMBERS * [Sold To].[Customer Name].[Customer Name].ALLMEMBERS * [Sold To].[Customer Name Number].[Customer Name Number].ALLMEMBERS * [Order].[Color].[Color].ALLMEMBERS * [Product].[Section Code].[Section Code].ALLMEMBERS * [Publication Date].[Date].[Date].ALLMEMBERS * [Publication Date].[Fiscal Period].[Fiscal Period].ALLMEMBERS * [Publication Date].[Fiscal Year].[Fiscal Year].ALLMEMBERS  ) }} DIMENSION PROPERTIES MEMBER_CAPTION, MEMBER_UNIQUE_NAME ON ROWS FROM ( SELECT ( {{  [Publication Date].[Fiscal Year].&[2016], [Publication Date].[Fiscal Year].&[2017], [Publication Date].[Fiscal Year].&[2018], [Publication Date].[Fiscal Year].&[2019] }} ) ON COLUMNS FROM ( SELECT ( -{{ [Order].[Sales Type].&[101] }} ) ON COLUMNS FROM ( SELECT ( -{{ [Order].[Sales Status].&[4] }} ) ON COLUMNS FROM ( SELECT ( -{{ [Order].[Order Kind].&[Trade] }} ) ON COLUMNS FROM ( SELECT ( {{ {} }} ) ON COLUMNS FROM ( SELECT ( {{ [Company].[Company Code].&[OSC], [Company].[Company Code].&[SSC] }} ) ON COLUMNS FROM [Revenue])))))) CELL PROPERTIES VALUE, BACK_COLOR, FORE_COLOR, FORMATTED_VALUE, FORMAT_STRING, FONT_NAME, FONT_SIZE, FONT_FLAGS'.format(z) 
+connString = "PROVIDER=MSOLAP;Data Source={0};Database={1}".format('fcwPsqlanl03','Crediting')
+def ado(strsql, connString):
     rs = win32com.client.Dispatch(r'ADODB.Recordset')
-    rs.Open(query, connString, CursorType=3)
-    query_result = query_result.append(pd.DataFrame(data= list(rs.GetRows())).transpose())
-    #query_result = fix_records(query_result)
-query_result  = fix_records(query_result)
-query_result = query_result[['company_code','gl_entity','gl_sub_entity','gl_product_code','ledger_account','order_ad_size','order_ad_type', 'order_color',
-                       'parent_name_number', 'sold_to_customer_name','sold_to_customer_name_number','sales_category','sales_subcategory',
-                       'product_code','parent_product','product_type', 'product_section_code','pub_date','pub_fiscal_period','pub_fiscal_year',
-                       'fiscal_quarter','fiscal_period','fiscal_week','net']]
+    rs.Open(strsql, connString)
+    t = rs.GetRows()
+    rs.Close()
+    return t
 
-#upload file to S3
-file_name = r'billing/billing_pull_'+str(datetime.now().strftime('%m_%d_%Y'))+'.csv'
-aws_access_key_id = 'AKIAIG4JTEG4R2TJJREA'
-aws_secret_access_key = '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'
+#Define Connection to Postgres Database
+hostname = 'mktstrategy.ciklurvi0auw.us-east-1.rds.amazonaws.com'
+username = 'tronc'
+password = 'tronc123123!'
+database = 'Crediting'
+port=5432
 
-#Create temporary file with results
-with tempfile.NamedTemporaryFile(mode='wb', delete=False) as fp:
-    query_result.to_csv(fp.name, index=False)    
-    s3 = boto3.client('s3',aws_access_key_id=aws_access_key_id,aws_secret_access_key=aws_secret_access_key)
-    s3.upload_file(fp.name,'bi-data-warehouse-00',file_name)
+def connect(user, password, db, host, port=5432):
+    url  = 'postgresql://{}:{}@{}:{}/{}'
+    url = url.format(user, password, host, port, db)
 
-#Get results from S3 and load into redshift
-from_file =  r"'s3://bi-data-warehouse-00/"+file_name+"'"
-key = r"'"+aws_access_key_id+ r"'"
-secret_key = r"'"+aws_secret_access_key+ r"'"
+    # The return value of create_engine() is our connection object
+    con = create_engine(url, client_encoding='utf8')
+    return con
+c =connect(username, password, database, hostname)
 
-conn = psycopg2.connect("dbname = 'dev' user= 'mpolissky' host='redshift.troncdata.com' port='5439' password= '3C9oGfQddbh4E0Mq'")
-cur = conn.cursor()
-cur.execute("SET AUTOCOMMIT = ON;")
 
-#load new file
-query_template = """
-     TRUNCATE TABLE financial_reporting.billing;
-     copy financial_reporting.billing
-     from {}
-     access_key_id {}
-     secret_access_key {}
-     IGNOREHEADER AS 1
-     csv;
-     COMMIT;
- """.format(from_file, key, secret_key)
+# In[3]:
 
-cur.execute(query_template)
+
+#Digital Revenue by SA ID from Crediting for 2019+
+query = 'SELECT NON EMPTY { [Measures].[Commission Net] } ON COLUMNS, NON EMPTY { ([Credit Sales Assignment].[Sales Assignment Code].[Sales Assignment Code].ALLMEMBERS * [Credit Sales Assignment].[Sales Assignment Sub Team ID].[Sales Assignment Sub Team ID].ALLMEMBERS * [Reporting Date].[Fiscal Period].[Fiscal Period].ALLMEMBERS ) } DIMENSION PROPERTIES MEMBER_CAPTION, MEMBER_UNIQUE_NAME ON ROWS FROM ( SELECT ( -{ [Credit Sales Assignment].[Sales Assignment Code].&[0] } ) ON COLUMNS FROM ( SELECT ( {[Reporting Date].[Fiscal Year].&[2019] } ) ON COLUMNS FROM ( SELECT ( { [Product].[Product Type].&[Alternative Digital], [Product].[Product Type].&[Online] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Status].&[4] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Type].&[101] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Order Kind].&[Trade] } ) ON COLUMNS FROM ( SELECT ( { [Company].[Company Code].&[MOT], [Company].[Company Code].&[SSC], [Company].[Company Code].&[OSC] } ) ON COLUMNS FROM [Crediting]))))))) WHERE ( [Company].[Company Code].CurrentMember, [Reporting Date].[Fiscal Year].CurrentMember ) CELL PROPERTIES VALUE, BACK_COLOR, FORE_COLOR, FORMATTED_VALUE, FORMAT_STRING, FONT_NAME, FONT_SIZE, FONT_FLAGS'
+a = ado(query, connString)
+df = pd.DataFrame(data= list(a)).transpose()
+df.rename(columns = {0:'sa_id', 2:'sub_team', 4:'fiscal_period', 6:'commission_net_dig'},inplace=True)
+df = df[['sa_id', 'sub_team', 'fiscal_period', 'commission_net_dig']]
+df['fiscal_year'] = df.fiscal_period.apply(lambda x: x[0:4])
+df['fiscal_period'] = df.fiscal_period.apply(lambda x: int(x[-2:]))
+df = df[['sa_id', 'sub_team', 'fiscal_year', 'fiscal_period', 'commission_net_dig']]
+digital = df.copy()
+
+
+# In[4]:
+
+
+#All IN by SA ID from Crediting for 2019+
+query = ' SELECT NON EMPTY { [Measures].[Commission Net] } ON COLUMNS, NON EMPTY { ([Credit Sales Assignment].[Sales Assignment Code].[Sales Assignment Code].ALLMEMBERS * [Credit Sales Assignment].[Sales Assignment Sub Team ID].[Sales Assignment Sub Team ID].ALLMEMBERS * [Reporting Date].[Fiscal Period].[Fiscal Period].ALLMEMBERS ) } DIMENSION PROPERTIES MEMBER_CAPTION, MEMBER_UNIQUE_NAME ON ROWS FROM ( SELECT ( -{ [Credit Sales Assignment].[Sales Assignment Code].&[0] } ) ON COLUMNS FROM ( SELECT ( {[Reporting Date].[Fiscal Year].&[2019] } ) ON COLUMNS FROM ( SELECT ( -{ [Product].[Product Type].&[Direct Mail] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Status].&[4] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Type].&[101] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Order Kind].&[Trade] } ) ON COLUMNS FROM ( SELECT ( { [Company].[Company Code].&[MOT], [Company].[Company Code].&[SSC], [Company].[Company Code].&[OSC] } ) ON COLUMNS FROM [Crediting]))))))) WHERE ( [Company].[Company Code].CurrentMember, [Reporting Date].[Fiscal Year].CurrentMember ) CELL PROPERTIES VALUE, BACK_COLOR, FORE_COLOR, FORMATTED_VALUE, FORMAT_STRING, FONT_NAME, FONT_SIZE, FONT_FLAGS'
+a = ado(query, connString)
+df = pd.DataFrame(data= list(a)).transpose()
+df.rename(columns = {0:'sa_id', 2:'sub_team', 4:'fiscal_period', 6:'commission_net_all'},inplace=True)
+df = df[['sa_id', 'sub_team', 'fiscal_period', 'commission_net_all']]
+df['fiscal_year'] = df.fiscal_period.apply(lambda x: x[0:4])
+df['fiscal_period'] = df.fiscal_period.apply(lambda x: int(x[-2:]))
+df = df[['sa_id', 'sub_team', 'fiscal_year', 'fiscal_period', 'commission_net_all']]
+all_in = df.copy()
+
+
+# In[5]:
+
+
+results = all_in.merge(digital, how='left', on=['sa_id', 'fiscal_year', 'fiscal_period'])
+results['commission_net_print'] = results['commission_net_all'] - results['commission_net_dig']
+results.fillna(0,inplace=True)
+
+
+# In[ ]:
+
+
+connString = "PROVIDER=MSOLAP;Data Source={0};Database={1}".format('fcwPsqlanl03','TMModelingCube')
+#Digital Revenue by SA ID from TM Modeling for 2017, 2018
+query = 'SELECT NON EMPTY { [Measures].[Commission Net] } ON COLUMNS, NON EMPTY { ([TM Sales Assignment].[SA ID].[SA ID].ALLMEMBERS *[TM Sales Assignment].[Sales Assignment Sub Team].[Sales Assignment Sub Team].ALLMEMBERS *[Reporting Date].[Fiscal Period].[Fiscal Period].ALLMEMBERS ) } DIMENSION PROPERTIES MEMBER_CAPTION, MEMBER_UNIQUE_NAME ON ROWS FROM ( SELECT ( { [Reporting Date].[Fiscal Year].&[2017],[Reporting Date].[Fiscal Year].&[2018] } ) ON COLUMNS FROM ( SELECT ( -{ [TM Sales Assignment].[SA ID].&[Missing] } ) ON COLUMNS FROM ( SELECT ( { [Product].[Product Type].&[Alternative Digital], [Product].[Product Type].&[Online] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Type].&[101] } ) ON COLUMNS FROM ( SELECT ( { [Order].[Sales Status].&[3] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Order Kind].&[Trade] } ) ON COLUMNS FROM ( SELECT ( { [Company].[Company Code].&[OSC], [Company].[Company Code].&[SSC], [Company].[Company Code].&[MOT] } ) ON COLUMNS FROM [Territory Management Modeling]))))))) WHERE ( [Company].[Company Code].CurrentMember, [Order].[Sales Status].&[3], [Product].[Product Type].CurrentMember, [Reporting Date].[Fiscal Year].CurrentMember ) CELL PROPERTIES VALUE, BACK_COLOR, FORE_COLOR, FORMATTED_VALUE, FORMAT_STRING, FONT_NAME, FONT_SIZE, FONT_FLAGS'
+a = ado(query, connString)
+df = pd.DataFrame(data= list(a)).transpose()
+df.rename(columns = {0:'sa_id', 2:'sub_team', 4:'fiscal_period', 6:'commission_net_dig'},inplace=True)
+df = df[['sa_id', 'sub_team', 'fiscal_period', 'commission_net_dig']]
+df['fiscal_year'] = df.fiscal_period.apply(lambda x: x[0:4])
+df['fiscal_period'] = df.fiscal_period.apply(lambda x: int(x[-2:]))
+df = df[['sa_id', 'sub_team', 'fiscal_year', 'fiscal_period', 'commission_net_dig']]
+digital = df.copy()
+
+
+# In[ ]:
+
+
+#All IN by SA ID from from TM Modeling for 2017, 2018
+query = ' SELECT NON EMPTY { [Measures].[Commission Net] } ON COLUMNS, NON EMPTY { ([TM Sales Assignment].[SA ID].[SA ID].ALLMEMBERS * [TM Sales Assignment].[Sales Assignment Sub Team].[Sales Assignment Sub Team].ALLMEMBERS *  [Reporting Date].[Fiscal Period].[Fiscal Period].ALLMEMBERS ) } DIMENSION PROPERTIES MEMBER_CAPTION, MEMBER_UNIQUE_NAME ON ROWS FROM ( SELECT ( { [Reporting Date].[Fiscal Year].&[2017],[Reporting Date].[Fiscal Year].&[2018]  } ) ON COLUMNS FROM ( SELECT ( -{ [TM Sales Assignment].[SA ID].&[Missing] } ) ON COLUMNS FROM ( SELECT ( -{ [Product].[Product Type].&[Direct Mail] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Sales Type].&[101] } ) ON COLUMNS FROM ( SELECT ( { [Order].[Sales Status].&[3] } ) ON COLUMNS FROM ( SELECT ( -{ [Order].[Order Kind].&[Trade] } ) ON COLUMNS FROM ( SELECT ( { [Company].[Company Code].&[OSC], [Company].[Company Code].&[SSC], [Company].[Company Code].&[MOT] } ) ON COLUMNS FROM [Territory Management Modeling]))))))) WHERE ( [Company].[Company Code].CurrentMember, [Order].[Sales Status].&[3], [Reporting Date].[Fiscal Year].CurrentMember ) CELL PROPERTIES VALUE, BACK_COLOR, FORE_COLOR, FORMATTED_VALUE, FORMAT_STRING, FONT_NAME, FONT_SIZE, FONT_FLAGS'
+a = ado(query, connString)
+df = pd.DataFrame(data= list(a)).transpose()
+df.rename(columns = {0:'sa_id', 2:'sub_team', 4:'fiscal_period', 6:'commission_net_all'},inplace=True)
+df = df[['sa_id','sub_team', 'fiscal_period', 'commission_net_all']]
+df['fiscal_year'] = df.fiscal_period.apply(lambda x: x[0:4])
+df['fiscal_period'] = df.fiscal_period.apply(lambda x: int(x[-2:]))
+df = df[['sa_id', 'sub_team','fiscal_year', 'fiscal_period', 'commission_net_all']]
+all_in = df.copy()
+
+
+# In[ ]:
+
+
+results2 = all_in.merge(digital, how='left', on=['sa_id', 'fiscal_year', 'fiscal_period'])
+results2['commission_net_print'] = results2['commission_net_all'] - results2['commission_net_dig']
+results2.fillna(0,inplace=True)
+
+
+# In[ ]:
+
+
+results['asof_date'] = datetime.today().strftime('%Y-%m-%d')
+results2['asof_date'] = datetime.today().strftime('%Y-%m-%d')
+
+
+# In[ ]:
+
+
+results = results[['sa_id','fiscal_year', 'fiscal_period',
+       'commission_net_all', 'commission_net_dig',
+       'commission_net_print', 'asof_date', 'sub_team_x']]
+
+results2 = results2[['sa_id','fiscal_year', 'fiscal_period',
+       'commission_net_all', 'commission_net_dig',
+       'commission_net_print', 'asof_date', 'sub_team_x']]
+
+results.rename(columns = {'sub_team_x':'sub_team'}, inplace=True)
+results2.rename(columns = {'sub_team_x':'sub_team'}, inplace=True)
+
+
+# In[ ]:
+
+
+#delete today's records
+today_date = datetime.today().strftime('%Y-%m-%d')
+query = "DELETE FROM commission_sales WHERE asof_date = '{}".format(today_date)+"'"
+c.execute(sa_text(query).execution_options(autocommit=True))
+
+
+# In[ ]:
+
+
+results.to_sql('commission_sales', c, if_exists='append', index=False)
+results2.to_sql('commission_sales', c, if_exists='append', index=False)
 
