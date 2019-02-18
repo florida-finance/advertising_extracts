@@ -1,4 +1,4 @@
-# billing_extracts
+# Advertising Extracts
 Scripts for ETL related to the billing/crediting cubes
 
 
