@@ -89,8 +89,8 @@ query_result['pub_date'] = query_result['pub_date'].apply(pd.to_datetime, format
 
 #upload file to S3
 file_name = r'tm_modeling/tm_pull_'+str(datetime.now().strftime('%m_%d_%Y'))+'.csv'
-aws_access_key_id = 'AKIAIG4JTEG4R2TJJREA'
-aws_secret_access_key = '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'
+aws_access_key_id = 'AKIAJOC4TXTHP65DUTTQ'
+aws_secret_access_key = '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'
 
 #Create temporary file with results
 with tempfile.NamedTemporaryFile(mode='wb', delete=False) as fp:
