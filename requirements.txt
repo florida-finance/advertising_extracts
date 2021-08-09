@@ -10,7 +10,7 @@ psycopg2==2.7.6.1
 pypiwin32==223
 python-dateutil==2.7.5
 pytz==2018.7
-pywin32==224
+pywin32==301
 s3transfer==0.1.13
 six==1.11.0
 SQLAlchemy==1.2.17
